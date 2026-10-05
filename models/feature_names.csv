@@ -1,0 +1,15 @@
+Feature
+vibration_rms
+temperature_motor
+current_phase_avg
+pressure_level
+rpm
+hours_since_maintenance
+ambient_temp
+machine_type_CNC
+machine_type_Compressor
+machine_type_Pump
+machine_type_Robotic Arm
+operating_mode_idle
+operating_mode_normal
+operating_mode_peak

@@ -1,0 +1,4 @@
+Risk State,Minimum Probability,Maximum Probability,Rule
+Normal,0.0,0.19,Probability < 0.19
+Warning,0.19,0.37,0.19 <= Probability < 0.37
+High Risk,0.37,1.0,Probability >= 0.37

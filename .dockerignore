@@ -1,0 +1,10 @@
+.git/
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.vscode/
+01_Source_Code/
+02_Data/
+03_Project_Outputs/
+MachineSense_Final_Result.csv

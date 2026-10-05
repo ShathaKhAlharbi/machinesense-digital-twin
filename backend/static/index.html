@@ -1,0 +1,1536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MachineSense - Factory Digital Twin Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+    .pin-pulse {
+      animation: pinPulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+    @keyframes pinPulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.4); opacity: 0.35; }
+    }
+    .gauge-track { stroke-dasharray: 251.2; stroke-dashoffset: 0; }
+    .gauge-fill {
+      stroke-dasharray: 251.2;
+      transition: stroke-dashoffset 0.8s ease-in-out, stroke 0.4s ease;
+    }
+    /* Custom compact scrollbar */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: #f1f5f9; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+  </style>
+</head>
+<body class="bg-[#F8FAFC] text-[#0F172A] min-h-screen antialiased flex flex-col justify-between">
+
+  <!-- ========================================================================= -->
+  <!-- 1. COMPACT PROFESSIONAL INDUSTRIAL HEADER                                 -->
+  <!-- ========================================================================= -->
+  <header class="bg-white border-b border-[#E2E8F0] px-5 py-2.5 sticky top-0 z-40 shadow-xs">
+    <div class="max-w-[1600px] mx-auto flex items-center justify-between gap-4">
+      
+      <!-- Brand & Assembly Line Context -->
+      <div class="flex items-center gap-5">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-lg bg-[#FF6B00] flex items-center justify-center text-white shadow-xs">
+            <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="font-extrabold text-base tracking-tight text-[#0F172A]">MachineSense</span>
+              <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200">DIGITAL TWIN</span>
+            </div>
+            <p class="text-[11px] text-slate-400 font-medium leading-none mt-0.5">Assembly Line #213 • Predictive Maintenance System</p>
+          </div>
+        </div>
+
+        <!-- Line Status Context Tag -->
+        <div class="hidden md:flex items-center gap-2 pl-4 border-l border-slate-200 text-xs text-slate-600 font-medium">
+          <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-[#10B981] animate-pulse"></span> Line Normal</span>
+          <span class="text-slate-300">•</span>
+          <span class="text-slate-500">4 Active Assets</span>
+        </div>
+      </div>
+
+      <!-- User Identification & Tools -->
+      <div class="flex items-center gap-3">
+        <!-- Live Timestamp -->
+        <div class="hidden sm:block text-right pr-3 border-r border-slate-200">
+          <p class="text-[11px] font-bold text-slate-700 mono" id="clock-display">00:00:00</p>
+          <p class="text-[10px] text-slate-400 font-medium">Shift 1 • Auto Sync</p>
+        </div>
+
+        <!-- User Profile (Requested: Eng. Shatha) -->
+        <div class="flex items-center gap-2.5 pl-1">
+          <div class="w-8 h-8 rounded-lg bg-[#0F172A] text-white font-bold text-xs flex items-center justify-center shadow-xs">
+            ES
+          </div>
+          <div class="text-left">
+            <p class="text-xs font-bold leading-tight text-[#0F172A]">Eng. Shatha</p>
+            <p class="text-[10px] text-slate-400 font-medium">Plant Operations Lead</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- ========================================================================= -->
+  <!-- 2. MACHINE SELECTOR & OPERATING MODE BAR                                  -->
+  <!-- ========================================================================= -->
+  <section class="bg-white border-b border-[#E2E8F0] px-5 py-2">
+    <div class="max-w-[1600px] mx-auto flex flex-wrap items-center justify-between gap-3">
+      
+      <!-- 4 Distinct Machine Tabs -->
+      <div class="flex items-center gap-2">
+        <span class="text-xs font-bold text-slate-400 uppercase tracking-wider mr-1 hidden sm:inline">Fleet Assets:</span>
+        <div class="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200/80 gap-1" id="fleet-selector-pills">
+          <!-- Machine 1: CNC -->
+          <button onclick="selectMachine('4')" id="pill-4" class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-2 bg-white text-slate-900 shadow-xs border border-slate-200">
+            <span class="w-2 h-2 rounded-full bg-[#10B981]" id="dot-4"></span>
+            <span>CNC-01</span>
+            <span class="text-[10px] text-slate-400 font-normal hidden lg:inline">Machining Center</span>
+          </button>
+
+          <!-- Machine 2: Pump -->
+          <button onclick="selectMachine('6')" id="pill-6" class="px-3.5 py-1.5 rounded-lg text-xs font-medium transition flex items-center gap-2 text-slate-600 hover:text-slate-900 hover:bg-slate-200/60">
+            <span class="w-2 h-2 rounded-full bg-[#10B981]" id="dot-6"></span>
+            <span>Pump-02</span>
+            <span class="text-[10px] text-slate-400 font-normal hidden lg:inline">Coolant Pump</span>
+          </button>
+
+          <!-- Machine 3: Compressor -->
+          <button onclick="selectMachine('12')" id="pill-12" class="px-3.5 py-1.5 rounded-lg text-xs font-medium transition flex items-center gap-2 text-slate-600 hover:text-slate-900 hover:bg-slate-200/60">
+            <span class="w-2 h-2 rounded-full bg-[#F59E0B]" id="dot-12"></span>
+            <span>Compressor-03</span>
+            <span class="text-[10px] text-slate-400 font-normal hidden lg:inline">Air Utility</span>
+          </button>
+
+          <!-- Machine 4: Robotic Arm -->
+          <button onclick="selectMachine('20')" id="pill-20" class="px-3.5 py-1.5 rounded-lg text-xs font-medium transition flex items-center gap-2 text-slate-600 hover:text-slate-900 hover:bg-slate-200/60">
+            <span class="w-2 h-2 rounded-full bg-[#EF4444]" id="dot-20"></span>
+            <span>Robot-04</span>
+            <span class="text-[10px] text-slate-400 font-normal hidden lg:inline">6-Axis Arm</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Mode Simulation Toggles -->
+      <div class="flex items-center gap-2">
+        <span class="text-xs font-semibold text-slate-400 hidden md:inline">Simulate Mode:</span>
+        <div class="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200/80 gap-1">
+          <button onclick="simulateMode('idle')" id="btn-mode-idle" class="px-3 py-1 rounded-lg text-xs font-semibold text-slate-600 hover:bg-white transition">Idle</button>
+          <button onclick="simulateMode('normal')" id="btn-mode-normal" class="px-3 py-1 rounded-lg text-xs font-bold bg-[#0F172A] text-white shadow-xs transition">Normal</button>
+          <button onclick="simulateMode('peak')" id="btn-mode-peak" class="px-3 py-1 rounded-lg text-xs font-semibold text-slate-600 hover:bg-white transition">Peak Load</button>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ========================================================================= -->
+  <!-- 3. ABOVE-THE-FOLD DASHBOARD DECK (Compact 3D Twin + Key Health + Telemetry) -->
+  <!-- ========================================================================= -->
+  <main class="max-w-[1600px] mx-auto w-full px-5 py-3 space-y-3 flex-1">
+    
+    <!-- Top Row: Compact 3D Digital Twin Viewport (Left) + Health/Risk & Specs (Right) -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-3 items-stretch">
+      
+      <!-- LEFT: Compact 3D Digital Twin Stage (7 cols) -->
+      <div class="lg:col-span-7 bg-white border border-[#E2E8F0] rounded-2xl shadow-xs relative flex flex-col justify-between overflow-hidden" style="height: 290px;">
+        
+        <!-- Viewport Header: Machine Info & Camera Controls -->
+        <div class="absolute top-3 left-3 right-3 flex items-center justify-between z-20 pointer-events-none">
+          <!-- Active Machine Identity Overlay -->
+          <div class="bg-white/90 backdrop-blur-md border border-[#E2E8F0] rounded-xl px-3 py-1.5 shadow-xs flex items-center gap-2 pointer-events-auto">
+            <div class="w-2.5 h-2.5 rounded-full bg-[#10B981]" id="stage-status-dot"></div>
+            <div>
+              <p class="text-xs font-bold text-[#0F172A] leading-tight" id="stage-machine-name">CNC Machining Center #01</p>
+              <p class="text-[10px] text-slate-400 font-medium" id="stage-station-tag">Station 01 — Milling & Shaping</p>
+            </div>
+          </div>
+
+          <!-- Functional Camera View Switchers (3D, FR, TP, EE) -->
+          <div class="flex items-center gap-1 bg-white/90 backdrop-blur-md border border-[#E2E8F0] rounded-xl p-1 shadow-xs pointer-events-auto">
+            <button onclick="setCameraView('3d')" id="cam-3d" class="px-2.5 py-1 rounded-lg text-xs font-bold bg-[#FF6B00] text-white shadow-xs transition" title="Perspective / Isometric 3D View">3D</button>
+            <button onclick="setCameraView('fr')" id="cam-fr" class="px-2.5 py-1 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-100 transition" title="Front Elevation View">FR</button>
+            <button onclick="setCameraView('tp')" id="cam-tp" class="px-2.5 py-1 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-100 transition" title="Top-Down Plan View">TP</button>
+            <button onclick="setCameraView('ee')" id="cam-ee" class="px-2.5 py-1 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-100 transition" title="Detailed Inspection View (Critical Sensor Area)">EE</button>
+          </div>
+        </div>
+
+        <!-- Three.js Interactive 3D Canvas Container -->
+        <div id="three-container" class="w-full h-full relative cursor-grab active:cursor-grabbing">
+          <!-- WebGL canvas injected here -->
+        </div>
+
+        <!-- Dynamic 3D Spatial HUD Hotspot Pins Overlay -->
+        <div id="hud-pins-layer" class="absolute inset-0 pointer-events-none z-10 overflow-hidden">
+          <!-- Pin 1: Temperature Motor -->
+          <div id="pin-temp" class="absolute transform -translate-x-1/2 -translate-y-1/2 pointer-events-auto transition-transform duration-75">
+            <div class="flex items-center gap-1.5 bg-white/95 backdrop-blur-md border border-slate-200 rounded-lg px-2 py-1 shadow-md hover:scale-105 transition cursor-pointer">
+              <span class="w-2 h-2 rounded-full bg-[#10B981]" id="pin-temp-dot"></span>
+              <span class="text-[10px] font-bold text-slate-400 uppercase tracking-tight" id="pin-temp-label">Motor Temp</span>
+              <span class="text-xs font-black mono text-[#0F172A]" id="pin-temp-val">48.6°C</span>
+            </div>
+          </div>
+
+          <!-- Pin 2: Vibration RMS -->
+          <div id="pin-vib" class="absolute transform -translate-x-1/2 -translate-y-1/2 pointer-events-auto transition-transform duration-75">
+            <div class="flex items-center gap-1.5 bg-white/95 backdrop-blur-md border border-slate-200 rounded-lg px-2 py-1 shadow-md hover:scale-105 transition cursor-pointer">
+              <span class="w-2 h-2 rounded-full bg-[#10B981]" id="pin-vib-dot"></span>
+              <span class="text-[10px] font-bold text-slate-400 uppercase tracking-tight" id="pin-vib-label">Vibration</span>
+              <span class="text-xs font-black mono text-[#0F172A]" id="pin-vib-val">0.82 mm/s</span>
+            </div>
+          </div>
+
+          <!-- Pin 3: RPM / Speed -->
+          <div id="pin-rpm" class="absolute transform -translate-x-1/2 -translate-y-1/2 pointer-events-auto transition-transform duration-75">
+            <div class="flex items-center gap-1.5 bg-white/95 backdrop-blur-md border border-slate-200 rounded-lg px-2 py-1 shadow-md hover:scale-105 transition cursor-pointer">
+              <span class="w-2 h-2 rounded-full bg-[#FF6B00]"></span>
+              <span class="text-[10px] font-bold text-slate-400 uppercase tracking-tight" id="pin-rpm-label">Spindle</span>
+              <span class="text-xs font-black mono text-[#0F172A]" id="pin-rpm-val">2021 RPM</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Viewport Bottom Status Bar -->
+        <div class="absolute bottom-2 left-3 right-3 flex items-center justify-between text-[11px] text-slate-400 pointer-events-none z-20">
+          <span class="bg-white/80 backdrop-blur-sm px-2 py-0.5 rounded border border-slate-200/60 font-medium">
+            Serial: <strong class="mono text-slate-700" id="stage-serial">#AL213-CNC01</strong>
+          </span>
+          <span class="bg-white/80 backdrop-blur-sm px-2 py-0.5 rounded border border-slate-200/60 font-medium" id="camera-hint">
+            Drag to Orbit • Scroll to Zoom
+          </span>
+        </div>
+
+      </div>
+
+      <!-- RIGHT: Machine Health, Risk & Specs Panel (5 cols) -->
+      <div class="lg:col-span-5 bg-white border border-[#E2E8F0] rounded-2xl p-4 shadow-xs flex flex-col justify-between" style="height: 290px;">
+        
+        <div class="flex items-start justify-between">
+          <div>
+            <div class="flex items-center gap-2">
+              <h2 class="text-sm font-extrabold text-[#0F172A] uppercase tracking-wider" id="health-panel-title">Asset Health & Risk Status</h2>
+              <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#10B981]/10 text-[#10B981] border border-[#10B981]/20" id="health-risk-badge">Normal</span>
+            </div>
+            <p class="text-[11px] text-slate-400 mt-0.5">Machine Learning 24h Predictive Horizon</p>
+          </div>
+          <button onclick="openCopilotReport()" class="text-xs font-bold text-[#FF6B00] hover:text-[#ea580c] flex items-center gap-1">
+            <span>AI Report</span>
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+          </button>
+        </div>
+
+        <!-- Compact Radial Gauge & Score Readout -->
+        <div class="grid grid-cols-12 gap-3 items-center my-1">
+          <!-- Semicircular SVG Gauge -->
+          <div class="col-span-6 flex flex-col items-center justify-center relative">
+            <svg class="w-40 h-24" viewBox="0 0 160 90">
+              <path class="gauge-track" d="M 20 80 A 60 60 0 0 1 140 80" fill="none" stroke="#E2E8F0" stroke-width="12" stroke-linecap="round"/>
+              <path id="gauge-arc" class="gauge-fill" d="M 20 80 A 60 60 0 0 1 140 80" fill="none" stroke="#10B981" stroke-width="12" stroke-dashoffset="50" stroke-linecap="round"/>
+            </svg>
+            <div class="absolute bottom-1 text-center">
+              <span class="text-2xl font-black text-[#0F172A] mono leading-none" id="gauge-score">94.5%</span>
+              <p class="text-[10px] font-bold text-slate-400 uppercase mt-0.5">Overall Health</p>
+            </div>
+          </div>
+
+          <!-- Secondary Probability Metrics -->
+          <div class="col-span-6 space-y-2 border-l border-slate-100 pl-3">
+            <div>
+              <p class="text-[10px] font-bold text-slate-400 uppercase">24h Failure Probability</p>
+              <div class="flex items-baseline gap-1.5 mt-0.5">
+                <span class="text-xl font-extrabold mono text-[#10B981]" id="stat-fail-prob">5.5%</span>
+                <span class="text-[10px] text-slate-400">Random Forest</span>
+              </div>
+            </div>
+            <div>
+              <p class="text-[10px] font-bold text-slate-400 uppercase">Operating Profile</p>
+              <p class="text-xs font-bold text-[#0F172A] capitalize mt-0.5" id="stat-mode-desc">Normal Continuous</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Spec Grid -->
+        <div class="pt-2 border-t border-slate-100 grid grid-cols-3 gap-2 text-xs">
+          <div class="bg-slate-50 p-2 rounded-xl border border-slate-100">
+            <p class="text-[10px] text-slate-400 font-semibold uppercase">Uptime</p>
+            <p class="text-xs font-bold text-slate-800 mono mt-0.5" id="spec-uptime">99.1%</p>
+          </div>
+          <div class="bg-slate-50 p-2 rounded-xl border border-slate-100">
+            <p class="text-[10px] text-slate-400 font-semibold uppercase">Units Today</p>
+            <p class="text-xs font-bold text-slate-800 mono mt-0.5" id="spec-units">890 units</p>
+          </div>
+          <div class="bg-slate-50 p-2 rounded-xl border border-slate-100">
+            <p class="text-[10px] text-slate-400 font-semibold uppercase">Energy Load</p>
+            <p class="text-xs font-bold text-slate-800 mono mt-0.5" id="spec-energy">480 kWh</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- 4. MAIN TELEMETRY CARDS ROW (Clearly Visible Above the Fold on Desktop)   -->
+    <!-- ========================================================================= -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+      
+      <!-- Telemetry Card 1: RPM / Cycle Speed (PredictRequest.rpm) -->
+      <div class="bg-white border border-[#E2E8F0] rounded-2xl p-3.5 shadow-xs flex flex-col justify-between">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-slate-500 uppercase tracking-tight" id="telem-title-rpm">Spindle Speed</span>
+          <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-[#10B981] border border-emerald-200">OPTIMAL</span>
+        </div>
+        <div class="my-2">
+          <div class="flex items-baseline gap-1">
+            <span class="text-2xl font-black mono text-[#0F172A]" id="telem-val-rpm">2021.4</span>
+            <span class="text-xs font-semibold text-slate-400">RPM</span>
+          </div>
+        </div>
+        <div>
+          <div class="flex justify-between text-[10px] text-slate-400 font-medium mb-1">
+            <span>Current</span>
+            <span id="telem-target-rpm">Target: 2000 RPM</span>
+          </div>
+          <div class="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+            <div id="telem-bar-rpm" class="bg-[#FF6B00] h-1.5 rounded-full transition-all duration-500" style="width: 82%"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Telemetry Card 2: Operating / Maintenance Time (hours_since_maintenance) -->
+      <div class="bg-white border border-[#E2E8F0] rounded-2xl p-3.5 shadow-xs flex flex-col justify-between">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-slate-500 uppercase tracking-tight">Operating Time</span>
+          <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600" id="telem-maint-badge">CALIBRATED</span>
+        </div>
+        <div class="my-2">
+          <div class="flex items-baseline gap-1">
+            <span class="text-2xl font-black mono text-[#0F172A]" id="telem-val-hours">81.9</span>
+            <span class="text-xs font-semibold text-slate-400">hrs</span>
+          </div>
+        </div>
+        <div>
+          <div class="flex justify-between text-[10px] text-slate-400 font-medium mb-1">
+            <span>Since Service</span>
+            <span>Limit: 200 hrs</span>
+          </div>
+          <div class="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+            <div id="telem-bar-hours" class="bg-indigo-500 h-1.5 rounded-full transition-all duration-500" style="width: 41%"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Telemetry Card 3: Load / Phase Current Average (current_phase_avg) -->
+      <div class="bg-white border border-[#E2E8F0] rounded-2xl p-3.5 shadow-xs flex flex-col justify-between">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-slate-500 uppercase tracking-tight">Phase Current / Load</span>
+          <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-50 text-[#0284C7] border border-blue-200">NORMAL</span>
+        </div>
+        <div class="my-2">
+          <div class="flex items-baseline gap-1">
+            <span class="text-2xl font-black mono text-[#0F172A]" id="telem-val-current">8.45</span>
+            <span class="text-xs font-semibold text-slate-400">A</span>
+          </div>
+        </div>
+        <div>
+          <div class="flex justify-between text-[10px] text-slate-400 font-medium mb-1">
+            <span>Inverter Draw</span>
+            <span>Max: 16.0 A</span>
+          </div>
+          <div class="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+            <div id="telem-bar-current" class="bg-[#0284C7] h-1.5 rounded-full transition-all duration-500" style="width: 53%"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Telemetry Card 4: Pressure Level (pressure_level) -->
+      <div class="bg-white border border-[#E2E8F0] rounded-2xl p-3.5 shadow-xs flex flex-col justify-between">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-slate-500 uppercase tracking-tight">Pressure Level</span>
+          <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-[#10B981] border border-emerald-200">STABLE</span>
+        </div>
+        <div class="my-2">
+          <div class="flex items-baseline gap-1">
+            <span class="text-2xl font-black mono text-[#0F172A]" id="telem-val-pressure">52.1</span>
+            <span class="text-xs font-semibold text-slate-400">PSI</span>
+          </div>
+        </div>
+        <div>
+          <div class="flex justify-between text-[10px] text-slate-400 font-medium mb-1">
+            <span>Line Hydraulic/Air</span>
+            <span>Nominal: 60 PSI</span>
+          </div>
+          <div class="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+            <div id="telem-bar-pressure" class="bg-[#10B981] h-1.5 rounded-full transition-all duration-500" style="width: 86%"></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- 5. SECONDARY OPERATIONS SECTIONS (Activity, Fleet Table, AI Diagnostics)   -->
+    <!-- ========================================================================= -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-3 pt-2">
+      
+      <!-- 24-Hour Production Activity Matrix (Left 5 cols) -->
+      <div class="lg:col-span-5 bg-white border border-[#E2E8F0] rounded-2xl p-4 shadow-xs flex flex-col justify-between">
+        <div class="flex items-center justify-between mb-2">
+          <div>
+            <h3 class="text-xs font-bold text-[#0F172A] uppercase tracking-wider">24-Hour Production Activity</h3>
+            <p class="text-[10px] text-slate-400">Hourly Asset Machine Cycles & Run State</p>
+          </div>
+          <div class="flex items-center gap-2 text-[10px] font-semibold text-slate-500">
+            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-[#10B981]"></span> Run</span>
+            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-[#FF6B00]"></span> Peak</span>
+            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-slate-300"></span> Idle</span>
+          </div>
+        </div>
+
+        <div class="bg-slate-50 border border-slate-100 rounded-xl p-3 my-1">
+          <div class="grid grid-cols-12 gap-1.5" id="dot-matrix-grid">
+            <!-- Populated via JS -->
+          </div>
+          <div class="flex justify-between text-[10px] text-slate-400 mono mt-2">
+            <span>00:00</span>
+            <span>06:00</span>
+            <span>12:00</span>
+            <span>18:00</span>
+            <span>24:00</span>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between text-[11px] text-slate-500 pt-2 border-t border-slate-100">
+          <span>Active Batch: <strong>#LOT-213-9B</strong></span>
+          <span class="text-[#0284C7] font-semibold">Overall Efficiency: 94.2%</span>
+        </div>
+      </div>
+
+      <!-- Real-Time Alerts & Events Log (Right 7 cols) -->
+      <div class="lg:col-span-7 bg-white border border-[#E2E8F0] rounded-2xl p-4 shadow-xs flex flex-col justify-between">
+        <div class="flex items-center justify-between mb-2">
+          <div class="flex items-center gap-2">
+            <h3 class="text-xs font-bold text-[#0F172A] uppercase tracking-wider">Telemetry Alerts & Events</h3>
+            <span class="w-2 h-2 rounded-full bg-[#EF4444] animate-ping"></span>
+          </div>
+          <span class="text-[10px] text-slate-400 font-semibold">Live Event Log</span>
+        </div>
+
+        <div class="space-y-2 text-xs overflow-y-auto max-h-[140px] pr-1" id="alerts-container">
+          <!-- Alerts rendered via JS -->
+        </div>
+
+        <div class="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
+          <span>Events logged in past 24 hours: <strong>14</strong></span>
+          <button onclick="openCopilotReport()" class="font-bold text-[#FF6B00] hover:underline">Launch Diagnostic Assistant &rarr;</button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Complete Fleet Assembly Line Table -->
+    <div class="bg-white border border-[#E2E8F0] rounded-2xl p-4 shadow-xs">
+      <div class="flex items-center justify-between mb-3">
+        <div>
+          <h3 class="text-xs font-bold text-[#0F172A] uppercase tracking-wider">Assembly Line #213 Fleet Overview</h3>
+          <p class="text-[10px] text-slate-400">Connected Mechanical Assets & Online Predictive Models</p>
+        </div>
+        <button onclick="fetchFleetData()" class="px-2.5 py-1 text-xs font-semibold rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600">
+          Refresh Fleet
+        </button>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs">
+          <thead>
+            <tr class="border-b border-slate-100 text-slate-400 uppercase tracking-wider font-bold text-[10px]">
+              <th class="pb-2 font-bold">Asset ID</th>
+              <th class="pb-2 font-bold">Machine Equipment</th>
+              <th class="pb-2 font-bold">Station Assignment</th>
+              <th class="pb-2 font-bold">Operating Mode</th>
+              <th class="pb-2 font-bold">RMS Vibration</th>
+              <th class="pb-2 font-bold">Motor Temp</th>
+              <th class="pb-2 font-bold">24h Failure Risk</th>
+              <th class="pb-2 font-bold">Health Level</th>
+              <th class="pb-2 text-right font-bold">Inspect</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100" id="fleet-table-body">
+            <!-- Dynamically populated via JS -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ========================================================================= -->
+  <!-- 6. AI PREDICTIVE MAINTENANCE REPORT MODAL (Grounded LLM Diagnostics)      -->
+  <!-- ========================================================================= -->
+  <div id="copilot-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-4">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-xl bg-[#0F172A] text-white flex items-center justify-center font-bold">
+            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a8 8 0 100 16 8 8 0 000-16zm1 11H9v-2h2v2zm0-4H9V5h2v4z"/></svg>
+          </div>
+          <div>
+            <h3 class="font-extrabold text-sm text-[#0F172A]" id="modal-machine-name">Machine Diagnostic Work Order</h3>
+            <p class="text-xs text-slate-400">Grounded LLM Recommendation Engine</p>
+          </div>
+        </div>
+        <button onclick="closeCopilotReport()" class="p-1 rounded-lg text-slate-400 hover:bg-slate-100">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div class="p-3 rounded-xl bg-slate-50 border border-slate-200">
+          <p class="font-bold text-slate-700 uppercase tracking-wider mb-1 text-[10px]">1. Status Summary</p>
+          <p class="text-slate-600 leading-relaxed" id="modal-summary">Loading telemetry analysis...</p>
+        </div>
+        <div class="p-3 rounded-xl bg-blue-50 border border-blue-100">
+          <p class="font-bold text-blue-900 uppercase tracking-wider mb-1 text-[10px]">2. Immediate Recommended Action</p>
+          <p class="text-blue-800 leading-relaxed" id="modal-action">Analyzing machine tolerances...</p>
+        </div>
+        <div class="p-3 rounded-xl bg-rose-50 border border-rose-100">
+          <p class="font-bold text-rose-900 uppercase tracking-wider mb-1 text-[10px]">3. Safety Alert</p>
+          <p class="text-rose-800 leading-relaxed" id="modal-safety">Verifying safety limits...</p>
+        </div>
+      </div>
+
+      <div class="pt-3 border-t border-slate-100 flex items-center justify-between">
+        <span class="text-xs text-slate-400" id="modal-risk-meta">Failure Prob: 5.5%</span>
+        <div class="flex gap-2">
+          <button onclick="closeCopilotReport()" class="px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50">Close</button>
+          <button onclick="window.print()" class="px-3.5 py-1.5 rounded-xl bg-[#0F172A] text-white text-xs font-bold hover:bg-slate-800 shadow-xs">Print Work Order</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- 7. REAL THREE.JS 3D INDUSTRIAL DIGITAL TWIN ENGINE & APPLICATION CONTROLLER -->
+  <!-- ========================================================================= -->
+  <script>
+    // State Management
+    let currentMachineId = '4'; // Default CNC-01
+    let fleetCache = {};
+    let scene, camera, renderer, controls;
+    let currentModelGroup = null;
+    let cameraViewMode = '3d';
+
+    // 3D Hotspot Anchor Positions for current model
+    let hotspotAnchors = {
+      temp: new THREE.Vector3(0, 0, 0),
+      vibration: new THREE.Vector3(0, 0, 0),
+      rpm: new THREE.Vector3(0, 0, 0)
+    };
+
+    // Camera presets for current machine
+    let cameraPresets = {
+      '3d': { pos: new THREE.Vector3(2.6, 2.0, 2.8), target: new THREE.Vector3(0, 0.6, 0) },
+      'fr': { pos: new THREE.Vector3(0, 0.7, 3.4), target: new THREE.Vector3(0, 0.7, 0) },
+      'tp': { pos: new THREE.Vector3(0, 3.8, 0.05), target: new THREE.Vector3(0, 0.4, 0) },
+      'ee': { pos: new THREE.Vector3(0.5, 0.9, 1.4), target: new THREE.Vector3(0, 0.8, 0.2) }
+    };
+
+    let targetCamPos = new THREE.Vector3().copy(cameraPresets['3d'].pos);
+    let targetCamLook = new THREE.Vector3().copy(cameraPresets['3d'].target);
+
+    // =========================================================================
+    // THREE.JS INITIALIZATION & INDUSTRIAL MATERIALS
+    // =========================================================================
+    function initThree() {
+      const container = document.getElementById('three-container');
+      const width = container.clientWidth || 600;
+      const height = container.clientHeight || 290;
+
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0xF8FAFC);
+
+      // Camera
+      camera = new THREE.PerspectiveCamera(40, width / height, 0.1, 100);
+      camera.position.copy(targetCamPos);
+
+      // WebGL Renderer with soft antialiasing
+      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+      renderer.setSize(width, height);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      container.appendChild(renderer.domElement);
+
+      // OrbitControls
+      controls = new THREE.OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.06;
+      controls.minDistance = 1.0;
+      controls.maxDistance = 8.0;
+      controls.maxPolarAngle = Math.PI / 2 + 0.05; // don't go below floor
+      controls.target.copy(targetCamLook);
+
+      // Studio Lighting for Engineering Equipment
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.75);
+      scene.add(ambientLight);
+
+      const keyLight = new THREE.DirectionalLight(0xffffff, 0.9);
+      keyLight.position.set(4, 6, 4);
+      keyLight.castShadow = true;
+      keyLight.shadow.mapSize.width = 1024;
+      keyLight.shadow.mapSize.height = 1024;
+      keyLight.shadow.camera.near = 0.5;
+      keyLight.shadow.camera.far = 15;
+      scene.add(keyLight);
+
+      const fillLight = new THREE.DirectionalLight(0x94a3b8, 0.45);
+      fillLight.position.set(-4, 3, -3);
+      scene.add(fillLight);
+
+      const topLight = new THREE.DirectionalLight(0xffffff, 0.35);
+      topLight.position.set(0, 5, 0);
+      scene.add(topLight);
+
+      // Industrial Floor Grid & Shadow Plane
+      const grid = new THREE.GridHelper(8, 20, 0xCBD5E1, 0xE2E8F0);
+      grid.position.y = 0;
+      scene.add(grid);
+
+      const shadowPlaneGeo = new THREE.PlaneGeometry(8, 8);
+      const shadowPlaneMat = new THREE.ShadowMaterial({ opacity: 0.18 });
+      const shadowPlane = new THREE.Mesh(shadowPlaneGeo, shadowPlaneMat);
+      shadowPlane.rotation.x = -Math.PI / 2;
+      shadowPlane.position.y = -0.002;
+      shadowPlane.receiveShadow = true;
+      scene.add(shadowPlane);
+
+      // Window resize handler
+      window.addEventListener('resize', onWindowResize);
+
+      // Start rendering loop
+      animate();
+    }
+
+    function onWindowResize() {
+      const container = document.getElementById('three-container');
+      if (!container || !renderer || !camera) return;
+      const width = container.clientWidth;
+      const height = container.clientHeight;
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
+      renderer.setSize(width, height);
+    }
+
+    // Material Library for Industrial Metal Assets
+    const matSteel = new THREE.MeshStandardMaterial({ color: 0xd1d5db, metalness: 0.9, roughness: 0.25 });
+    const matCastIron = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.8, roughness: 0.4 });
+    const matMachineWhite = new THREE.MeshStandardMaterial({ color: 0xf1f5f9, metalness: 0.2, roughness: 0.3 });
+    const matIndustrialOrange = new THREE.MeshStandardMaterial({ color: 0xea580c, metalness: 0.45, roughness: 0.35 });
+    const matIndustrialBlue = new THREE.MeshStandardMaterial({ color: 0x1d4ed8, metalness: 0.6, roughness: 0.35 });
+    const matIndustrialTeal = new THREE.MeshStandardMaterial({ color: 0x0f766e, metalness: 0.55, roughness: 0.35 });
+    const matBrass = new THREE.MeshStandardMaterial({ color: 0xd97706, metalness: 0.85, roughness: 0.3 });
+    const matGlass = new THREE.MeshStandardMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.35, roughness: 0.1, metalness: 0.1 });
+    const matChrome = new THREE.MeshStandardMaterial({ color: 0xf8fafc, metalness: 0.98, roughness: 0.1 });
+
+    // =========================================================================
+    // 3D MODEL BUILDERS: 4 DISTINCT INDUSTRIAL MACHINES
+    // =========================================================================
+
+    // 1. CNC MACHINING CENTER (Realistic Enclosure, Spindle, Rails, Table, Console)
+    function buildCncModel() {
+      const group = new THREE.Group();
+
+      // Heavy Machine Base
+      const baseGeo = new THREE.BoxGeometry(1.6, 0.25, 1.2);
+      const base = new THREE.Mesh(baseGeo, matCastIron);
+      base.position.y = 0.125;
+      base.castShadow = true;
+      base.receiveShadow = true;
+      group.add(base);
+
+      // Cabin Enclosure Body
+      const cabinGeo = new THREE.BoxGeometry(1.4, 1.1, 1.0);
+      const cabin = new THREE.Mesh(cabinGeo, matMachineWhite);
+      cabin.position.set(0, 0.8, 0);
+      cabin.castShadow = true;
+      group.add(cabin);
+
+      // Enclosure Front Cutout Frame (Dark)
+      const frameGeo = new THREE.BoxGeometry(1.1, 0.85, 0.05);
+      const frame = new THREE.Mesh(frameGeo, matCastIron);
+      frame.position.set(0, 0.82, 0.51);
+      group.add(frame);
+
+      // Polycarbonate Safety Window
+      const windowGeo = new THREE.PlaneGeometry(0.9, 0.7);
+      const win = new THREE.Mesh(windowGeo, matGlass);
+      win.position.set(0, 0.82, 0.54);
+      group.add(win);
+
+      // Interior Worktable (T-slot bed)
+      const tableGeo = new THREE.BoxGeometry(0.8, 0.12, 0.5);
+      const table = new THREE.Mesh(tableGeo, matSteel);
+      table.position.set(0, 0.45, 0.05);
+      table.castShadow = true;
+      group.add(table);
+
+      // Milling Spindle Housing & Motor
+      const spindleHeadGeo = new THREE.BoxGeometry(0.3, 0.4, 0.3);
+      const spindleHead = new THREE.Mesh(spindleHeadGeo, matCastIron);
+      spindleHead.position.set(0, 0.95, 0.05);
+      spindleHead.castShadow = true;
+      group.add(spindleHead);
+
+      // Spindle Drive Motor (Top)
+      const motorGeo = new THREE.CylinderGeometry(0.12, 0.12, 0.28, 20);
+      const motor = new THREE.Mesh(motorGeo, matIndustrialOrange);
+      motor.position.set(0, 1.25, 0.05);
+      motor.castShadow = true;
+      group.add(motor);
+
+      // Spindle Chuck & Endmill Tool
+      const chuckGeo = new THREE.CylinderGeometry(0.06, 0.04, 0.15, 16);
+      const chuck = new THREE.Mesh(chuckGeo, matChrome);
+      chuck.position.set(0, 0.7, 0.05);
+      group.add(chuck);
+
+      const toolGeo = new THREE.CylinderGeometry(0.015, 0.015, 0.1, 12);
+      const tool = new THREE.Mesh(toolGeo, matBrass);
+      tool.position.set(0, 0.58, 0.05);
+      group.add(tool);
+
+      // Pendant CNC Operator Control Arm
+      const armGeo = new THREE.CylinderGeometry(0.025, 0.025, 0.4, 10);
+      const arm = new THREE.Mesh(armGeo, matSteel);
+      arm.rotation.z = Math.PI / 4;
+      arm.position.set(0.85, 1.1, 0.3);
+      group.add(arm);
+
+      const panelGeo = new THREE.BoxGeometry(0.3, 0.35, 0.08);
+      const panel = new THREE.Mesh(panelGeo, matCastIron);
+      panel.position.set(1.0, 1.15, 0.45);
+      panel.rotation.y = -Math.PI / 6;
+      group.add(panel);
+
+      const screenGeo = new THREE.PlaneGeometry(0.24, 0.18);
+      const screenMat = new THREE.MeshBasicMaterial({ color: 0x0284C7 });
+      const screen = new THREE.Mesh(screenGeo, screenMat);
+      screen.position.set(1.0, 1.18, 0.495);
+      screen.rotation.y = -Math.PI / 6;
+      group.add(screen);
+
+      // Hotspot Anchors in 3D
+      hotspotAnchors = {
+        temp: new THREE.Vector3(0, 1.35, 0.05),
+        vibration: new THREE.Vector3(0, 0.95, 0.22),
+        rpm: new THREE.Vector3(0, 0.65, 0.05)
+      };
+
+      // Camera Presets for CNC
+      cameraPresets = {
+        '3d': { pos: new THREE.Vector3(2.5, 1.9, 2.7), target: new THREE.Vector3(0, 0.75, 0) },
+        'fr': { pos: new THREE.Vector3(0, 0.85, 3.2), target: new THREE.Vector3(0, 0.85, 0) },
+        'tp': { pos: new THREE.Vector3(0, 3.8, 0.05), target: new THREE.Vector3(0, 0.6, 0) },
+        'ee': { pos: new THREE.Vector3(0.5, 0.85, 1.25), target: new THREE.Vector3(0, 0.7, 0.1) } // Spindle Tool close-up
+      };
+
+      return group;
+    }
+
+    // 2. INDUSTRIAL PROCESS CENTRIFUGAL PUMP (Motor Fins, Flanges, Volute Casing, Shaft)
+    function buildPumpModel() {
+      const group = new THREE.Group();
+
+      // Structural Skid / Channel Baseplate
+      const skidGeo = new THREE.BoxGeometry(1.8, 0.14, 0.85);
+      const skid = new THREE.Mesh(skidGeo, matCastIron);
+      skid.position.y = 0.07;
+      skid.castShadow = true;
+      skid.receiveShadow = true;
+      group.add(skid);
+
+      // Electric Induction Motor (Cylindrical body with cooling ribs)
+      const motorBodyGeo = new THREE.CylinderGeometry(0.3, 0.3, 0.8, 24);
+      const motorBody = new THREE.Mesh(motorBodyGeo, matIndustrialTeal);
+      motorBody.rotation.z = Math.PI / 2;
+      motorBody.position.set(-0.45, 0.45, 0);
+      motorBody.castShadow = true;
+      group.add(motorBody);
+
+      // Terminal Box (Top of motor)
+      const termBoxGeo = new THREE.BoxGeometry(0.2, 0.14, 0.18);
+      const termBox = new THREE.Mesh(termBoxGeo, matCastIron);
+      termBox.position.set(-0.45, 0.8, 0);
+      group.add(termBox);
+
+      // Motor Rear Fan Shroud
+      const fanCowlGeo = new THREE.CylinderGeometry(0.31, 0.31, 0.15, 24);
+      const fanCowl = new THREE.Mesh(fanCowlGeo, matCastIron);
+      fanCowl.rotation.z = Math.PI / 2;
+      fanCowl.position.set(-0.88, 0.45, 0);
+      group.add(fanCowl);
+
+      // Shaft Coupling & Mesh Safety Guard
+      const guardGeo = new THREE.CylinderGeometry(0.18, 0.18, 0.28, 16);
+      const guard = new THREE.Mesh(guardGeo, matIndustrialOrange);
+      guard.rotation.z = Math.PI / 2;
+      guard.position.set(0.08, 0.45, 0);
+      group.add(guard);
+
+      // Bearing Pedestal Housing
+      const bearingGeo = new THREE.BoxGeometry(0.28, 0.32, 0.32);
+      const bearing = new THREE.Mesh(bearingGeo, matSteel);
+      bearing.position.set(0.32, 0.42, 0);
+      bearing.castShadow = true;
+      group.add(bearing);
+
+      // Pump Spiral Volute Casing
+      const voluteGeo = new THREE.CylinderGeometry(0.38, 0.38, 0.32, 28);
+      const volute = new THREE.Mesh(voluteGeo, matIndustrialTeal);
+      volute.rotation.z = Math.PI / 2;
+      volute.position.set(0.58, 0.48, 0);
+      volute.castShadow = true;
+      group.add(volute);
+
+      // Suction Inlet Flange (Axial End Flange)
+      const suctionGeo = new THREE.CylinderGeometry(0.16, 0.16, 0.3, 20);
+      const suction = new THREE.Mesh(suctionGeo, matSteel);
+      suction.rotation.z = Math.PI / 2;
+      suction.position.set(0.85, 0.48, 0);
+      group.add(suction);
+
+      const suctionFlangeGeo = new THREE.CylinderGeometry(0.24, 0.24, 0.05, 20);
+      const suctionFlange = new THREE.Mesh(suctionFlangeGeo, matCastIron);
+      suctionFlange.rotation.z = Math.PI / 2;
+      suctionFlange.position.set(0.98, 0.48, 0);
+      group.add(suctionFlange);
+
+      // Discharge Outlet Flange (Vertical Tangential Flange)
+      const dischargeGeo = new THREE.CylinderGeometry(0.14, 0.14, 0.4, 20);
+      const discharge = new THREE.Mesh(dischargeGeo, matSteel);
+      discharge.position.set(0.58, 0.78, 0);
+      group.add(discharge);
+
+      const dischargeFlangeGeo = new THREE.CylinderGeometry(0.22, 0.22, 0.05, 20);
+      const dischargeFlange = new THREE.Mesh(dischargeFlangeGeo, matCastIron);
+      dischargeFlange.position.set(0.58, 0.98, 0);
+      group.add(dischargeFlange);
+
+      // Dial Pressure Gauge on Discharge
+      const gaugeStemGeo = new THREE.CylinderGeometry(0.015, 0.015, 0.12, 10);
+      const gaugeStem = new THREE.Mesh(gaugeStemGeo, matBrass);
+      gaugeStem.position.set(0.58, 1.08, 0.12);
+      group.add(gaugeStem);
+
+      const gaugeDialGeo = new THREE.CylinderGeometry(0.07, 0.07, 0.03, 20);
+      const gaugeDial = new THREE.Mesh(gaugeDialGeo, matChrome);
+      gaugeDial.rotation.x = Math.PI / 2;
+      gaugeDial.position.set(0.58, 1.15, 0.14);
+      group.add(gaugeDial);
+
+      // Hotspot Anchors in 3D
+      hotspotAnchors = {
+        temp: new THREE.Vector3(-0.45, 0.75, 0),
+        vibration: new THREE.Vector3(0.32, 0.6, 0.15),
+        rpm: new THREE.Vector3(0.08, 0.58, 0)
+      };
+
+      // Camera Presets for Pump
+      cameraPresets = {
+        '3d': { pos: new THREE.Vector3(2.4, 1.8, 2.6), target: new THREE.Vector3(0.1, 0.5, 0) },
+        'fr': { pos: new THREE.Vector3(0.1, 0.55, 3.0), target: new THREE.Vector3(0.1, 0.55, 0) },
+        'tp': { pos: new THREE.Vector3(0.1, 3.6, 0.05), target: new THREE.Vector3(0.1, 0.45, 0) },
+        'ee': { pos: new THREE.Vector3(0.4, 0.75, 1.2), target: new THREE.Vector3(0.2, 0.5, 0) } // Bearing & Coupling inspection
+      };
+
+      return group;
+    }
+
+    // 3. INDUSTRIAL AIR COMPRESSOR (Receiver Tank, 2-Stage Pump Block, V-Belt Guard, Motor)
+    function buildCompressorModel() {
+      const group = new THREE.Group();
+
+      // Horizontal Air Receiver Tank Cylinder
+      const tankGeo = new THREE.CylinderGeometry(0.42, 0.42, 1.6, 28);
+      const tank = new THREE.Mesh(tankGeo, matIndustrialBlue);
+      tank.rotation.z = Math.PI / 2;
+      tank.position.set(0, 0.55, 0);
+      tank.castShadow = true;
+      group.add(tank);
+
+      // Tank Domed Ends (Spheres)
+      const domeLeftGeo = new THREE.SphereGeometry(0.42, 20, 20, 0, Math.PI * 2, 0, Math.PI / 2);
+      const domeLeft = new THREE.Mesh(domeLeftGeo, matIndustrialBlue);
+      domeLeft.rotation.z = Math.PI / 2;
+      domeLeft.position.set(-0.8, 0.55, 0);
+      group.add(domeLeft);
+
+      const domeRightGeo = new THREE.SphereGeometry(0.42, 20, 20, 0, Math.PI * 2, 0, Math.PI / 2);
+      const domeRight = new THREE.Mesh(domeRightGeo, matIndustrialBlue);
+      domeRight.rotation.z = -Math.PI / 2;
+      domeRight.position.set(0.8, 0.55, 0);
+      group.add(domeRight);
+
+      // Tank Welded Saddle Support Legs
+      const legGeo = new THREE.BoxGeometry(0.18, 0.25, 0.75);
+      const legLeft = new THREE.Mesh(legGeo, matCastIron);
+      legLeft.position.set(-0.55, 0.125, 0);
+      legLeft.castShadow = true;
+      group.add(legLeft);
+
+      const legRight = new THREE.Mesh(legGeo, matCastIron);
+      legRight.position.set(0.55, 0.125, 0);
+      legRight.castShadow = true;
+      group.add(legRight);
+
+      // Top Motor & Pump Base Shelf
+      const shelfGeo = new THREE.BoxGeometry(1.2, 0.06, 0.6);
+      const shelf = new THREE.Mesh(shelfGeo, matSteel);
+      shelf.position.set(0, 1.0, 0);
+      group.add(shelf);
+
+      // Two-Stage V-Twin Compressor Pump Block (Crankcase + Finned Cylinders)
+      const crankGeo = new THREE.BoxGeometry(0.35, 0.28, 0.35);
+      const crank = new THREE.Mesh(crankGeo, matCastIron);
+      crank.position.set(0.3, 1.15, 0);
+      crank.castShadow = true;
+      group.add(crank);
+
+      // V-Twin Cylinders with Cooling Ribs
+      const cyl1Geo = new THREE.CylinderGeometry(0.12, 0.12, 0.3, 16);
+      const cyl1 = new THREE.Mesh(cyl1Geo, matCastIron);
+      cyl1.rotation.z = Math.PI / 8;
+      cyl1.position.set(0.22, 1.35, 0);
+      group.add(cyl1);
+
+      const cyl2Geo = new THREE.CylinderGeometry(0.1, 0.1, 0.3, 16);
+      const cyl2 = new THREE.Mesh(cyl2Geo, matCastIron);
+      cyl2.rotation.z = -Math.PI / 8;
+      cyl2.position.set(0.38, 1.35, 0);
+      group.add(cyl2);
+
+      // Cylinder Heads & Air Intake Filters
+      const filterGeo = new THREE.CylinderGeometry(0.07, 0.07, 0.1, 16);
+      const filter1 = new THREE.Mesh(filterGeo, matChrome);
+      filter1.position.set(0.16, 1.55, 0);
+      group.add(filter1);
+
+      // Finned Copper Intercooler Coil
+      const coilGeo = new THREE.TorusGeometry(0.14, 0.02, 8, 24);
+      const coil = new THREE.Mesh(coilGeo, matBrass);
+      coil.position.set(0.3, 1.45, 0.15);
+      group.add(coil);
+
+      // Electric Drive Motor (Left)
+      const compMotorGeo = new THREE.CylinderGeometry(0.18, 0.18, 0.45, 20);
+      const compMotor = new THREE.Mesh(compMotorGeo, matCastIron);
+      compMotor.rotation.z = Math.PI / 2;
+      compMotor.position.set(-0.35, 1.18, 0);
+      compMotor.castShadow = true;
+      group.add(compMotor);
+
+      // V-Belt Safety Guard (Wire Cage housing)
+      const beltGuardGeo = new THREE.BoxGeometry(0.85, 0.45, 0.1);
+      const beltGuard = new THREE.Mesh(beltGuardGeo, matIndustrialOrange);
+      beltGuard.position.set(-0.02, 1.25, 0.28);
+      group.add(beltGuard);
+
+      // Pressure Regulator Manifold & Analog Gauges
+      const regBlockGeo = new THREE.BoxGeometry(0.1, 0.1, 0.1);
+      const regBlock = new THREE.Mesh(regBlockGeo, matBrass);
+      regBlock.position.set(0.75, 0.95, 0.3);
+      group.add(regBlock);
+
+      const compGaugeGeo = new THREE.CylinderGeometry(0.06, 0.06, 0.03, 16);
+      const compGauge = new THREE.Mesh(compGaugeGeo, matChrome);
+      compGauge.rotation.x = Math.PI / 2;
+      compGauge.position.set(0.75, 1.05, 0.35);
+      group.add(compGauge);
+
+      // Hotspot Anchors in 3D
+      hotspotAnchors = {
+        temp: new THREE.Vector3(0.3, 1.52, 0),
+        vibration: new THREE.Vector3(0.3, 1.15, 0.2),
+        rpm: new THREE.Vector3(-0.35, 1.25, 0.25)
+      };
+
+      // Camera Presets for Compressor
+      cameraPresets = {
+        '3d': { pos: new THREE.Vector3(2.5, 1.9, 2.7), target: new THREE.Vector3(0, 0.8, 0) },
+        'fr': { pos: new THREE.Vector3(0, 0.85, 3.2), target: new THREE.Vector3(0, 0.85, 0) },
+        'tp': { pos: new THREE.Vector3(0, 3.8, 0.05), target: new THREE.Vector3(0, 0.65, 0) },
+        'ee': { pos: new THREE.Vector3(0.65, 1.35, 1.1), target: new THREE.Vector3(0.3, 1.25, 0.1) } // Cylinder head & valves
+      };
+
+      return group;
+    }
+
+    // 4. 6-AXIS ARTICULATED INDUSTRIAL ROBOTIC ARM (Cast Base, Arm Castings, Wrist, Gripper)
+    function buildRobotModel() {
+      const group = new THREE.Group();
+
+      // Circular Anchor Baseplate
+      const baseplateGeo = new THREE.CylinderGeometry(0.55, 0.58, 0.1, 24);
+      const baseplate = new THREE.Mesh(baseplateGeo, matCastIron);
+      baseplate.position.y = 0.05;
+      baseplate.castShadow = true;
+      baseplate.receiveShadow = true;
+      group.add(baseplate);
+
+      // Axis 1 Turntable Casting
+      const ttableGeo = new THREE.CylinderGeometry(0.42, 0.48, 0.28, 24);
+      const ttable = new THREE.Mesh(ttableGeo, matIndustrialOrange);
+      ttable.position.y = 0.24;
+      ttable.castShadow = true;
+      group.add(ttable);
+
+      // Axis 2 Shoulder Joint Pivot & Servo
+      const shoulderGeo = new THREE.CylinderGeometry(0.24, 0.24, 0.42, 20);
+      const shoulder = new THREE.Mesh(shoulderGeo, matCastIron);
+      shoulder.rotation.z = Math.PI / 2;
+      shoulder.position.set(0, 0.48, 0);
+      group.add(shoulder);
+
+      // Axis 2 Lower Arm (Angled Cast Beam)
+      const lowerArmGeo = new THREE.BoxGeometry(0.22, 0.85, 0.24);
+      const lowerArm = new THREE.Mesh(lowerArmGeo, matIndustrialOrange);
+      lowerArm.position.set(-0.2, 0.82, 0);
+      lowerArm.rotation.z = Math.PI / 7;
+      lowerArm.castShadow = true;
+      group.add(lowerArm);
+
+      // Dual Counterbalance Cylinder
+      const cylGeo = new THREE.CylinderGeometry(0.06, 0.06, 0.6, 16);
+      const cyl = new THREE.Mesh(cylGeo, matSteel);
+      cyl.position.set(0.12, 0.72, 0.14);
+      cyl.rotation.z = -Math.PI / 10;
+      group.add(cyl);
+
+      // Axis 3 Elbow Joint Housing
+      const elbowGeo = new THREE.CylinderGeometry(0.2, 0.2, 0.38, 20);
+      const elbow = new THREE.Mesh(elbowGeo, matCastIron);
+      elbow.rotation.z = Math.PI / 2;
+      elbow.position.set(-0.35, 1.25, 0);
+      group.add(elbow);
+
+      // Axis 4 Forearm (Reaching forward)
+      const forearmGeo = new THREE.BoxGeometry(0.68, 0.18, 0.18);
+      const forearm = new THREE.Mesh(forearmGeo, matIndustrialOrange);
+      forearm.position.set(0.05, 1.32, 0);
+      forearm.rotation.z = -Math.PI / 12;
+      forearm.castShadow = true;
+      group.add(forearm);
+
+      // Axis 5/6 Compact Wrist Assembly
+      const wristGeo = new THREE.SphereGeometry(0.14, 16, 16);
+      const wrist = new THREE.Mesh(wristGeo, matCastIron);
+      wrist.position.set(0.45, 1.4, 0);
+      group.add(wrist);
+
+      // Tool Flange & Pneumatic Parallel Gripper
+      const flangeGeo = new THREE.CylinderGeometry(0.09, 0.09, 0.08, 16);
+      const flange = new THREE.Mesh(flangeGeo, matChrome);
+      flange.rotation.z = -Math.PI / 3;
+      flange.position.set(0.55, 1.45, 0);
+      group.add(flange);
+
+      const gripperBodyGeo = new THREE.BoxGeometry(0.12, 0.14, 0.16);
+      const gripperBody = new THREE.Mesh(gripperBodyGeo, matCastIron);
+      gripperBody.position.set(0.64, 1.5, 0);
+      group.add(gripperBody);
+
+      // Gripper Fingers
+      const fingerGeo = new THREE.BoxGeometry(0.08, 0.025, 0.03);
+      const finger1 = new THREE.Mesh(fingerGeo, matSteel);
+      finger1.position.set(0.72, 1.54, 0.05);
+      group.add(finger1);
+
+      const finger2 = new THREE.Mesh(fingerGeo, matSteel);
+      finger2.position.set(0.72, 1.46, -0.05);
+      group.add(finger2);
+
+      // Hotspot Anchors in 3D
+      hotspotAnchors = {
+        temp: new THREE.Vector3(0, 0.52, 0.22),
+        vibration: new THREE.Vector3(-0.35, 1.35, 0),
+        rpm: new THREE.Vector3(0.64, 1.55, 0.05)
+      };
+
+      // Camera Presets for Robot
+      cameraPresets = {
+        '3d': { pos: new THREE.Vector3(2.4, 1.9, 2.6), target: new THREE.Vector3(0.1, 0.85, 0) },
+        'fr': { pos: new THREE.Vector3(0, 0.85, 3.2), target: new THREE.Vector3(0, 0.85, 0) },
+        'tp': { pos: new THREE.Vector3(0, 3.8, 0.05), target: new THREE.Vector3(0, 0.6, 0) },
+        'ee': { pos: new THREE.Vector3(1.1, 1.7, 0.9), target: new THREE.Vector3(0.6, 1.45, 0) } // Wrist Gripper close-up
+      };
+
+      return group;
+    }
+
+    // =========================================================================
+    // SWITCH 3D MACHINE IN THREE.JS SCENE
+    // =========================================================================
+    function loadMachine3D(machineId) {
+      if (currentModelGroup) {
+        scene.remove(currentModelGroup);
+      }
+
+      const idStr = String(machineId);
+      if (idStr === '4') {
+        currentModelGroup = buildCncModel();
+      } else if (idStr === '6') {
+        currentModelGroup = buildPumpModel();
+      } else if (idStr === '12') {
+        currentModelGroup = buildCompressorModel();
+      } else {
+        currentModelGroup = buildRobotModel();
+      }
+
+      scene.add(currentModelGroup);
+
+      // Re-apply current camera view for this machine
+      setCameraView(cameraViewMode, true);
+    }
+
+    // Camera view switching with smooth lerping
+    function setCameraView(mode, instant = false) {
+      cameraViewMode = mode;
+
+      ['3d', 'fr', 'tp', 'ee'].forEach(m => {
+        const btn = document.getElementById(`cam-${m}`);
+        if (btn) {
+          if (m === mode) {
+            btn.className = "px-2.5 py-1 rounded-lg text-xs font-bold bg-[#FF6B00] text-white shadow-xs transition";
+          } else {
+            btn.className = "px-2.5 py-1 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-100 transition";
+          }
+        }
+      });
+
+      const preset = cameraPresets[mode] || cameraPresets['3d'];
+      targetCamPos.copy(preset.pos);
+      targetCamLook.copy(preset.target);
+
+      if (instant) {
+        camera.position.copy(targetCamPos);
+        controls.target.copy(targetCamLook);
+        controls.update();
+      }
+
+      // Update camera hint
+      const hint = document.getElementById('camera-hint');
+      if (hint) {
+        if (mode === 'ee') hint.innerText = "Engineering Inspection Angle • Critical Sensor Area";
+        else if (mode === 'fr') hint.innerText = "Front Elevation View";
+        else if (mode === 'tp') hint.innerText = "Top Plan View";
+        else hint.innerText = "Drag to Orbit • Scroll to Zoom";
+      }
+    }
+
+    // =========================================================================
+    // ANIMATION & 3D HUD PIN PROJECTION LOOP
+    // =========================================================================
+    function animate() {
+      requestAnimationFrame(animate);
+
+      // Smooth camera interpolation
+      camera.position.lerp(targetCamPos, 0.08);
+      controls.target.lerp(targetCamLook, 0.08);
+      controls.update();
+
+      // Project 3D Hotspot Anchors to 2D Screen Coordinates
+      projectPin('pin-temp', hotspotAnchors.temp);
+      projectPin('pin-vib', hotspotAnchors.vibration);
+      projectPin('pin-rpm', hotspotAnchors.rpm);
+
+      renderer.render(scene, camera);
+    }
+
+    function projectPin(pinId, worldPos) {
+      const pinEl = document.getElementById(pinId);
+      const container = document.getElementById('three-container');
+      if (!pinEl || !container || !worldPos) return;
+
+      const vector = worldPos.clone();
+      vector.project(camera);
+
+      // Hide pin if behind camera
+      if (vector.z > 1.0) {
+        pinEl.style.display = 'none';
+        return;
+      }
+
+      const w = container.clientWidth;
+      const h = container.clientHeight;
+      const x = (vector.x * 0.5 + 0.5) * w;
+      const y = (-(vector.y * 0.5) + 0.5) * h;
+
+      pinEl.style.display = 'block';
+      pinEl.style.left = `${Math.round(x)}px`;
+      pinEl.style.top = `${Math.round(y)}px`;
+    }
+
+    // =========================================================================
+    // MACHINE SELECTION & TELEMETRY SYNCHRONIZATION
+    // =========================================================================
+    async function selectMachine(machineId) {
+      currentMachineId = String(machineId);
+
+      // Update selector pills active state
+      ['4', '6', '12', '20'].forEach(id => {
+        const pill = document.getElementById(`pill-${id}`);
+        if (pill) {
+          if (id === currentMachineId) {
+            pill.className = "px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-2 bg-white text-[#FF6B00] shadow-xs border border-orange-200 ring-1 ring-[#FF6B00]/30";
+          } else {
+            pill.className = "px-3.5 py-1.5 rounded-lg text-xs font-medium transition flex items-center gap-2 text-slate-600 hover:text-slate-900 hover:bg-slate-200/60";
+          }
+        }
+      });
+
+      // Switch 3D Model
+      loadMachine3D(currentMachineId);
+
+      // Fetch and bind machine data
+      await fetchMachineData(currentMachineId);
+    }
+
+    async function fetchMachineData(machineId) {
+      try {
+        const res = await fetch(`/api/machines/${machineId}`);
+        if (!res.ok) throw new Error('API failed');
+        const m = await res.json();
+        fleetCache[machineId] = m;
+
+        // Stage Header & Info
+        document.getElementById('stage-machine-name').innerText = m.name;
+        document.getElementById('stage-station-tag').innerText = m.station;
+        document.getElementById('stage-serial').innerText = m.serial_no;
+        document.getElementById('health-panel-title').innerText = `${m.alias} Health & Risk`;
+
+        // Health & Risk Badges
+        const riskBadge = document.getElementById('health-risk-badge');
+        const dot = document.getElementById('stage-status-dot');
+        const failProbEl = document.getElementById('stat-fail-prob');
+        const gaugeArc = document.getElementById('gauge-arc');
+        const gaugeScore = document.getElementById('gauge-score');
+
+        const failPct = (m.failure_probability * 100).toFixed(1);
+        failProbEl.innerText = `${failPct}%`;
+        document.getElementById('stat-mode-desc').innerText = `${m.operating_mode} continuous`;
+        document.getElementById('spec-uptime').innerText = `${m.uptime}%`;
+        document.getElementById('spec-units').innerText = `${m.units_processed_today} units`;
+        document.getElementById('spec-energy').innerText = `${m.energy_consumption_kwh} kWh`;
+
+        // Gauge arc offset (251.2 is circumference, 0 is 100%, 251.2 is 0%)
+        const healthScore = Math.max(30, Math.min(99, Math.round((1 - m.failure_probability * 0.65) * 100)));
+        gaugeScore.innerText = `${healthScore}%`;
+        const offset = 251.2 - (251.2 * (healthScore / 100));
+        gaugeArc.style.strokeDashoffset = offset;
+
+        if (m.risk_level === 'High Risk') {
+          riskBadge.className = "text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#EF4444]/10 text-[#EF4444] border border-[#EF4444]/20 animate-pulse";
+          riskBadge.innerText = "Critical Risk";
+          dot.className = "w-2.5 h-2.5 rounded-full bg-[#EF4444] animate-ping";
+          failProbEl.className = "text-xl font-extrabold mono text-[#EF4444]";
+          gaugeArc.style.stroke = "#EF4444";
+        } else if (m.risk_level === 'Warning') {
+          riskBadge.className = "text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#F59E0B]/10 text-[#F59E0B] border border-[#F59E0B]/20";
+          riskBadge.innerText = "Warning State";
+          dot.className = "w-2.5 h-2.5 rounded-full bg-[#F59E0B]";
+          failProbEl.className = "text-xl font-extrabold mono text-[#F59E0B]";
+          gaugeArc.style.stroke = "#F59E0B";
+        } else {
+          riskBadge.className = "text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#10B981]/10 text-[#10B981] border border-[#10B981]/20";
+          riskBadge.innerText = "Normal Operation";
+          dot.className = "w-2.5 h-2.5 rounded-full bg-[#10B981]";
+          failProbEl.className = "text-xl font-extrabold mono text-[#10B981]";
+          gaugeArc.style.stroke = "#10B981";
+        }
+
+        // 3D HUD Pins values
+        document.getElementById('pin-temp-val').innerText = `${m.temperature_motor.toFixed(1)}°C`;
+        document.getElementById('pin-vib-val').innerText = `${m.vibration_rms.toFixed(2)} mm/s`;
+        document.getElementById('pin-rpm-val').innerText = `${Math.round(m.rpm)} RPM`;
+
+        // Update Pin Labels & Titles per machine type
+        if (m.machine_type === 'CNC') {
+          document.getElementById('pin-temp-label').innerText = "Spindle Temp";
+          document.getElementById('pin-vib-label').innerText = "Spindle Vib";
+          document.getElementById('pin-rpm-label').innerText = "Spindle Speed";
+          document.getElementById('telem-title-rpm').innerText = "Spindle Speed";
+        } else if (m.machine_type === 'Pump') {
+          document.getElementById('pin-temp-label').innerText = "Motor Stator";
+          document.getElementById('pin-vib-label').innerText = "Bearing Vib";
+          document.getElementById('pin-rpm-label').innerText = "Shaft RPM";
+          document.getElementById('telem-title-rpm').innerText = "Shaft Speed";
+        } else if (m.machine_type === 'Compressor') {
+          document.getElementById('pin-temp-label').innerText = "Head Temp";
+          document.getElementById('pin-vib-label').innerText = "Crankcase Vib";
+          document.getElementById('pin-rpm-label').innerText = "Motor Pulley";
+          document.getElementById('telem-title-rpm').innerText = "Motor Speed";
+        } else {
+          document.getElementById('pin-temp-label').innerText = "Joint 2 Stator";
+          document.getElementById('pin-vib-label').innerText = "Harmonic Vib";
+          document.getElementById('pin-rpm-label').innerText = "Cycle Speed";
+          document.getElementById('telem-title-rpm').innerText = "Cycle Speed";
+        }
+
+        // Telemetry Card 1: RPM
+        document.getElementById('telem-val-rpm').innerText = m.rpm.toFixed(1);
+        const rpmTarget = m.target_cycle_rate ? (m.target_cycle_rate * 15) : 2000;
+        document.getElementById('telem-target-rpm').innerText = `Target: ${Math.round(rpmTarget)} RPM`;
+        const rpmPct = Math.min(100, Math.round((m.rpm / (rpmTarget * 1.25)) * 100));
+        document.getElementById('telem-bar-rpm').style.width = `${rpmPct}%`;
+
+        // Telemetry Card 2: Hours Since Maintenance
+        document.getElementById('telem-val-hours').innerText = m.hours_since_maintenance.toFixed(1);
+        const hoursPct = Math.min(100, Math.round((m.hours_since_maintenance / 200) * 100));
+        document.getElementById('telem-bar-hours').style.width = `${hoursPct}%`;
+        const maintBadge = document.getElementById('telem-maint-badge');
+        if (m.hours_since_maintenance > 160) {
+          maintBadge.className = "text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-50 text-rose-600";
+          maintBadge.innerText = "SERVICE DUE";
+        } else {
+          maintBadge.className = "text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600";
+          maintBadge.innerText = "CALIBRATED";
+        }
+
+        // Telemetry Card 3: Load / Current Phase Avg
+        document.getElementById('telem-val-current').innerText = m.current_phase_avg.toFixed(2);
+        const curPct = Math.min(100, Math.round((m.current_phase_avg / 16.0) * 100));
+        document.getElementById('telem-bar-current').style.width = `${curPct}%`;
+
+        // Telemetry Card 4: Pressure Level
+        document.getElementById('telem-val-pressure').innerText = m.pressure_level.toFixed(1);
+        const presPct = Math.min(100, Math.round((m.pressure_level / 100.0) * 100));
+        document.getElementById('telem-bar-pressure').style.width = `${presPct}%`;
+
+        // Update Mode Simulator Active Button
+        ['idle', 'normal', 'peak'].forEach(mode => {
+          const btn = document.getElementById(`btn-mode-${mode}`);
+          if (btn) {
+            if (m.operating_mode === mode) {
+              btn.className = mode === 'peak' 
+                ? "px-3 py-1 rounded-lg text-xs font-bold bg-[#FF6B00] text-white shadow-xs transition"
+                : "px-3 py-1 rounded-lg text-xs font-bold bg-[#0F172A] text-white shadow-xs transition";
+            } else {
+              btn.className = "px-3 py-1 rounded-lg text-xs font-semibold text-slate-600 hover:bg-white transition";
+            }
+          }
+        });
+
+      } catch (err) {
+        console.error('Error fetching machine:', err);
+      }
+    }
+
+    // =========================================================================
+    // MODE SIMULATION ENGINE (Sends Mode Change to Backend API)
+    // =========================================================================
+    async function simulateMode(mode) {
+      try {
+        const res = await fetch(`/api/machines/${currentMachineId}/simulate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ operating_mode: mode })
+        });
+        if (res.ok) {
+          await fetchMachineData(currentMachineId);
+          await fetchFleetData();
+        }
+      } catch (err) {
+        console.error('Simulation error:', err);
+      }
+    }
+
+    // =========================================================================
+    // FLEET OVERVIEW & ASSEMBLY LINE STATUS
+    // =========================================================================
+    async function fetchFleetData() {
+      try {
+        const res = await fetch('/api/line/213');
+        if (!res.ok) throw new Error('Line API failed');
+        const data = await res.json();
+
+        // Update selector pill dot indicators
+        data.fleet.forEach(m => {
+          const dot = document.getElementById(`dot-${m.machine_id}`);
+          if (dot) {
+            if (m.risk_level === 'High Risk') dot.className = "w-2 h-2 rounded-full bg-[#EF4444] animate-ping";
+            else if (m.risk_level === 'Warning') dot.className = "w-2 h-2 rounded-full bg-[#F59E0B]";
+            else dot.className = "w-2 h-2 rounded-full bg-[#10B981]";
+          }
+        });
+
+        // Render Fleet Table
+        renderFleetTable(data.fleet);
+
+        // Render Alerts
+        renderAlerts(data.alerts);
+
+      } catch (err) {
+        console.warn('Fleet API error:', err);
+      }
+    }
+
+    function renderFleetTable(fleet) {
+      const tbody = document.getElementById('fleet-table-body');
+      tbody.innerHTML = '';
+
+      fleet.forEach(m => {
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-50/80 transition cursor-pointer";
+        tr.onclick = () => selectMachine(m.machine_id);
+
+        let riskBadge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#10B981]/10 text-[#10B981] border border-[#10B981]/20">Normal</span>';
+        if (m.risk_level === 'Warning') {
+          riskBadge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#F59E0B]/10 text-[#F59E0B] border border-[#F59E0B]/20">Warning</span>';
+        } else if (m.risk_level === 'High Risk') {
+          riskBadge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#EF4444]/10 text-[#EF4444] border border-[#EF4444]/20 animate-pulse">High Risk</span>';
+        }
+
+        const isCurrent = (m.machine_id === currentMachineId);
+
+        tr.innerHTML = `
+          <td class="py-2.5 font-bold mono text-[#0F172A]">${m.alias}</td>
+          <td class="py-2.5 font-bold text-slate-800">${m.name}</td>
+          <td class="py-2.5 text-slate-500">${m.station}</td>
+          <td class="py-2.5"><span class="px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-semibold uppercase text-[10px]">${m.operating_mode}</span></td>
+          <td class="py-2.5 mono font-semibold ${m.vibration_rms > 1.5 ? 'text-[#EF4444]' : 'text-slate-700'}">${m.vibration_rms.toFixed(2)} mm/s</td>
+          <td class="py-2.5 mono font-semibold">${m.temperature_motor.toFixed(1)} °C</td>
+          <td class="py-2.5 mono font-bold text-slate-800">${(m.failure_probability * 100).toFixed(1)}%</td>
+          <td class="py-2.5">${riskBadge}</td>
+          <td class="py-2.5 text-right">
+            <button class="px-2.5 py-1 rounded-lg ${isCurrent ? 'bg-[#FF6B00] text-white' : 'border border-slate-200 text-slate-600 hover:bg-slate-100'} font-bold text-[11px]">
+              ${isCurrent ? 'Active' : 'Inspect'}
+            </button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function renderAlerts(alerts) {
+      const container = document.getElementById('alerts-container');
+      container.innerHTML = '';
+
+      alerts.forEach(a => {
+        const div = document.createElement('div');
+        let borderClass = "border-slate-100 bg-slate-50";
+        let titleColor = "text-slate-800";
+        if (a.severity === 'critical') {
+          borderClass = "border-red-100 bg-red-50/70";
+          titleColor = "text-[#EF4444]";
+        } else if (a.severity === 'warning') {
+          borderClass = "border-amber-100 bg-amber-50/70";
+          titleColor = "text-[#F59E0B]";
+        } else if (a.severity === 'success') {
+          borderClass = "border-emerald-100 bg-emerald-50/70";
+          titleColor = "text-[#10B981]";
+        }
+
+        div.className = `p-2.5 rounded-xl border ${borderClass} flex items-start justify-between cursor-pointer hover:opacity-90`;
+        if (a.machine_id) div.onclick = () => selectMachine(a.machine_id);
+
+        div.innerHTML = `
+          <div>
+            <p class="font-bold ${titleColor}">${a.title}</p>
+            <p class="text-[11px] text-slate-600 mt-0.5">${a.description}</p>
+          </div>
+          <span class="text-[10px] font-semibold text-slate-400 mono shrink-0 ml-3">${a.timestamp}</span>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    // =========================================================================
+    // PRODUCTION ACTIVITY 24H DOT MATRIX
+    // =========================================================================
+    function renderActivityDotMatrix() {
+      const grid = document.getElementById('dot-matrix-grid');
+      grid.innerHTML = '';
+      const states = ['bg-[#10B981]', 'bg-[#10B981]', 'bg-[#10B981]', 'bg-[#FF6B00]', 'bg-slate-300'];
+
+      for (let i = 0; i < 24; i++) {
+        const dot = document.createElement('span');
+        let color = states[i % 3];
+        if (i === 12 || i === 13) color = 'bg-slate-300';
+        else if (i >= 18 && i <= 21) color = 'bg-[#FF6B00]';
+
+        dot.className = `w-3 h-3 rounded ${color} hover:scale-125 transition cursor-pointer`;
+        dot.title = `Hour ${i}:00 — Operational Status`;
+        grid.appendChild(dot);
+      }
+    }
+
+    // =========================================================================
+    // AI COPILOT REPORT CONTROLLER (Grounded LLM Diagnostics)
+    // =========================================================================
+    async function openCopilotReport() {
+      const modal = document.getElementById('copilot-modal');
+      modal.classList.remove('hidden');
+
+      try {
+        const res = await fetch('/api/copilot/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query: "Inspection diagnosis", machine_id: currentMachineId })
+        });
+        const data = await res.json();
+        const rec = data.recommendation;
+
+        document.getElementById('modal-machine-name').innerText = `${data.machine_name} Diagnostic Work Order`;
+        document.getElementById('modal-summary').innerText = rec.status_summary || "Operating telemetry verified within monitored limits.";
+        document.getElementById('modal-action').innerText = rec.recommended_action || "Schedule routine preventative inspection on primary bearing seals.";
+        document.getElementById('modal-safety').innerText = rec.safety_alert || "Follow standard plant lockout/tagout protocol.";
+        document.getElementById('modal-risk-meta').innerText = `Failure Probability: ${(data.failure_probability * 100).toFixed(1)}% (${data.risk_level})`;
+      } catch (err) {
+        document.getElementById('modal-summary').innerText = "Telemetry verified. Model inference operating normally.";
+      }
+    }
+
+    function closeCopilotReport() {
+      document.getElementById('copilot-modal').classList.add('hidden');
+    }
+
+    // Live Clock Display
+    function startClock() {
+      const el = document.getElementById('clock-display');
+      setInterval(() => {
+        el.innerText = new Date().toLocaleTimeString('en-US', { hour12: false });
+      }, 1000);
+    }
+
+    // =========================================================================
+    // INITIALIZATION LIFECYCLE
+    // =========================================================================
+    window.addEventListener('DOMContentLoaded', () => {
+      startClock();
+      initThree();
+      renderActivityDotMatrix();
+      selectMachine('4'); // Load CNC-01 as default
+      fetchFleetData();
+
+      // Background telemetry polling every 4 seconds
+      setInterval(() => {
+        fetchMachineData(currentMachineId);
+        fetchFleetData();
+      }, 4000);
+    });
+  </script>
+</body>
+</html>

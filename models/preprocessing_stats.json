@@ -1,0 +1,59 @@
+{
+  "numeric_median": {
+    "vibration_rms": 1.25,
+    "temperature_motor": 50.21,
+    "current_phase_avg": 6.38,
+    "pressure_level": 46.0,
+    "rpm": 854.3,
+    "hours_since_maintenance": 170.47,
+    "ambient_temp": 13.0
+  },
+  "categorical_mode": {
+    "machine_type": "Robotic Arm",
+    "operating_mode": "normal"
+  },
+  "train_min": {
+    "vibration_rms": 0.35,
+    "temperature_motor": 28.0,
+    "current_phase_avg": 2.2,
+    "pressure_level": 10.5,
+    "rpm": 124.1,
+    "hours_since_maintenance": 0.0,
+    "ambient_temp": 8.0
+  },
+  "train_max": {
+    "vibration_rms": 10.0,
+    "temperature_motor": 95.0,
+    "current_phase_avg": 35.0,
+    "pressure_level": 206.5,
+    "rpm": 4097.9,
+    "hours_since_maintenance": 575.63,
+    "ambient_temp": 18.0
+  },
+  "train_range": {
+    "vibration_rms": 9.65,
+    "temperature_motor": 67.0,
+    "current_phase_avg": 32.8,
+    "pressure_level": 196.0,
+    "rpm": 3973.7999999999997,
+    "hours_since_maintenance": 575.63,
+    "ambient_temp": 10.0
+  },
+  "feature_order": [
+    "vibration_rms",
+    "temperature_motor",
+    "current_phase_avg",
+    "pressure_level",
+    "rpm",
+    "hours_since_maintenance",
+    "ambient_temp",
+    "machine_type_CNC",
+    "machine_type_Compressor",
+    "machine_type_Pump",
+    "machine_type_Robotic Arm",
+    "operating_mode_idle",
+    "operating_mode_normal",
+    "operating_mode_peak"
+  ],
+  "source": "Derived from machinesense_EDA_preprocessing.py training-time variables (numeric_median, categorical_mode, train_min, train_max, train_range)"
+}
