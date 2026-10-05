@@ -39,3 +39,20 @@ build/
 dist/
 *.egg-info/
 *.log
+
+# Frontend and Node dependencies
+node_modules/
+.npm/
+
+# Credentials and secrets
+credentials.json
+client_secret*.json
+*.token
+*.credential*
+
+# Temporary and generated files
+*.tmp
+*.temp
+*.bak
+*.swp
+*~
