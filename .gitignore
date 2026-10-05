@@ -12,6 +12,12 @@ ENV/
 .env
 .env.*
 !.env.example
+secrets/
+**/secrets/
+*.pem
+*.key
+*.p12
+*.pfx
 
 # Jupyter
 .ipynb_checkpoints/
